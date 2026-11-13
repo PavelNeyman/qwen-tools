@@ -1,10 +1,10 @@
 name: Release
 
 on:
-  workflow_dispatch: {}
   push:
     tags:
       - 'v*'
+  workflow_dispatch: {} # Позволяет запускать вручную из вкладки Actions
 
 permissions:
   contents: write
@@ -38,6 +38,17 @@ jobs:
             -ldflags="-s -w" \
             -o gh-tools-${{ matrix.os }}-${{ matrix.arch }} \
             ./cmd/gh-tools
+
+      - name: Compress with UPX (Linux only)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx
+          echo "До сжатия:"
+          ls -lh gh-tools-${{ matrix.os }}-${{ matrix.arch }}
+          upx --best --lzma gh-tools-${{ matrix.os }}-${{ matrix.arch }}
+          echo "После сжатия:"
+          ls -lh gh-tools-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
