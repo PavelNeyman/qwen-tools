@@ -1,0 +1,3 @@
+Upload started: 2026-11-13 23:34:54 UTC
+Expect 2 archives: go-archive.tar.gz, sc-gosec-archive.tar.gz
+Check /tmp/go-upload.status and /tmp/sc-gosec-upload.status
