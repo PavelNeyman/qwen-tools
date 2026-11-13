@@ -1,0 +1,12 @@
+# Qwen Tools Archive URLs
+# Updated: 2026-11-13 23:41:00 UTC
+
+# staticcheck + gosec (41 МБ исходник → ~15 МБ сжатый)
+# Для скачивания: curl -o /tmp/sc-gosec.tar.gz https://sendit.sh/efh-g/sc_gosec.tar.gz
+# Для распаковки: tar -xzf /tmp/sc-gosec.tar.gz -C /
+sc-gosec-url: https://sendit.sh/efh-g/sc_gosec.tar.gz
+
+# Go скачивается с dl.google.com каждый раз:
+# curl -fsSL -o /tmp/go.tar.gz https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
+# tar -xzf /tmp/go.tar.gz -C /tmp/
+# go-url: https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
