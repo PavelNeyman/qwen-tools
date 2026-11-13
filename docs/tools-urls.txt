@@ -8,3 +8,6 @@ staticcheck-url: https://sendit.sh/Q_ZDe/pZVun.gz
 # 1. curl -o /tmp/staticcheck.tar.gz https://sendit.sh/Q_ZDe/pZVun.gz
 # 2. tar -xzf /tmp/staticcheck.tar.gz -C /tmp/
 # 3. /tmp/staticcheck/staticcheck -f json ./...
+
+# gosec (28 МБ → ~10 МБ сжатый)
+gosec-url: https://sendit.sh/dVoly/gosec.tar.gz
