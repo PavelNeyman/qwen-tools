@@ -34,7 +34,7 @@ jobs:
 
       - name: Build
         run: |
-          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build \
+          CGO_ENABLED=0 GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build \
             -ldflags="-s -w" \
             -o gh-tools-${{ matrix.os }}-${{ matrix.arch }} \
             ./cmd/gh-tools
