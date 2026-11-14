@@ -1,0 +1,44 @@
+name: Sync to sendit.sh
+on:
+  workflow_run:
+    workflows: ["Build Tools"]
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(grep "^version:" docs/tools-urls.txt | cut -d' ' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Upload to sendit.sh
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION_DIR="binaries/$VERSION"
+          echo "# sendit.sh URLs for $VERSION" > docs/sendit-urls.txt
+          echo "# Generated: $(date -u)" >> docs/sendit-urls.txt
+          for bin in $VERSION_DIR/*; do
+            name=$(basename $bin)
+            echo "Uploading $name..."
+            response=$(curl -sT "$bin" https://sendit.sh/)
+            url=$(echo "$response" | grep -oE 'https://sendit\.sh/[A-Za-z0-9/_-]+' | head -1)
+            if [ -n "$url" ]; then
+              echo "$name: $url" >> docs/sendit-urls.txt
+              echo "  ✓ $url"
+            else
+              echo "  ✗ Failed to upload $name"
+            fi
+          done
+      - name: Commit sendit URLs
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add docs/sendit-urls.txt
+          if git diff --staged --quiet; then echo "No changes"
+          else git commit -m "docs: update sendit.sh URLs" && git push; fi
