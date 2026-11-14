@@ -1,22 +1,21 @@
 #!/bin/bash
-# qwen-tools - загрузка инструментов для статического анализа Go-кода
+# qwen-tools v1.3.0 - загрузка инструментов для статического анализа Go-кода
 # Использует GitHub API для персистентного хранения
 
 set -e
 
-echo "=== Загрузка qwen tools ==="
+echo "=== Загрузка qwen tools v1.3.0 ==="
 start_time=$(date +%s)
 
 # 1. Скачиваем qwen бинарник через GitHub API
 if [ ! -f /tmp/qwen ]; then
     echo "[1/3] Скачивание qwen бинарника через API..."
-    # Скачиваем .gz через API
     curl -s -H "Authorization: Bearer $GH_TOKEN" \
          -H "Accept: application/vnd.github.v3.raw" \
          "https://api.github.com/repos/PavelNeyman/qwen-tools/contents/qwen-linux-amd64.gz" \
          | gunzip > /tmp/qwen
     chmod +x /tmp/qwen
-    echo "  ✓ qwen готов"
+    echo "  ✓ qwen v1.3.0 готов"
 else
     echo "[1/3] qwen уже загружен"
 fi
@@ -44,7 +43,14 @@ end_time=$(date +%s)
 echo ""
 echo "✓ Все инструменты готовы за $((end_time - start_time))с"
 echo ""
-echo "Использование:"
-echo "  qwen tools status              - статус инструментов"
-echo "  staticcheck -f json ./...      - статический анализ"
-echo "  gosec -fmt json -quiet ./...   - анализ безопасности"
+echo "Новые команды v1.3.0:"
+echo "  qwen exec <cmd> [args]     - выполнить команду"
+echo "  qwen read <path>           - прочитать файл"
+echo "  qwen write <path> <content>- записать файл"
+echo "  qwen find <pattern> <dir>  - найти файлы"
+echo "  qwen tree <dir> [depth]    - дерево директорий"
+echo "  qwen http <method> <url>   - HTTP запрос"
+echo ""
+echo "Старые команды:"
+echo "  qwen tools status          - статус инструментов"
+echo "  qwen review <repo>         - полный ревью"
