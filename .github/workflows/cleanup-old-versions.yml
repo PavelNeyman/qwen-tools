@@ -1,10 +1,13 @@
 name: Cleanup Old Versions
+
 on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   cleanup:
     runs-on: ubuntu-latest
@@ -12,20 +15,38 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Keep only last 3 versions
         run: |
           cd binaries/
+          
           versions=$(ls -d */ 2>/dev/null | grep -v "^latest/" | sed 's/\///' | sort -V)
           count=$(echo "$versions" | wc -l)
+          
           echo "Found $count versions"
-          if [ $count -le 3 ]; then echo "Nothing to cleanup (<=3 versions)"; exit 0; fi
+          
+          if [ $count -le 3 ]; then
+            echo "Nothing to cleanup (<=3 versions)"
+            exit 0
+          fi
+          
           keep=$(echo "$versions" | tail -3)
           remove=$(echo "$versions" | head -n -3)
+          
           echo "Keeping: $keep"
           echo "Removing: $remove"
-          for version in $remove; do echo "Removing $version..."; rm -rf "$version"; done
+          
+          for version in $remove; do
+            echo "Removing $version..."
+            rm -rf "$version"
+          done
+          
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add -A binaries/
-          if git diff --staged --quiet; then echo "No changes"
-          else git commit -m "chore: cleanup old versions (keep last 3)" && git push; fi
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "chore: cleanup old versions (keep last 3)"
+            git push
+          fi
