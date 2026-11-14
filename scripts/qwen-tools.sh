@@ -1,51 +1,29 @@
 #!/bin/bash
 # qwen-tools - загрузка инструментов для статического анализа Go-кода
-# Использует sendit.sh для персистентного хранения staticcheck и gosec
+# Использует sendit.sh для персистентного хранения
 
 set -e
 
-echo "=== Загрузка инструментов ==="
+echo "=== Загрузка qwen tools ==="
 start_time=$(date +%s)
 
-# 1. staticcheck (7 МБ с sendit.sh)
-if [ ! -f /tmp/staticcheck/staticcheck ]; then
-    echo "[1/4] Скачивание staticcheck..."
-    curl -s -o /tmp/staticcheck.tar.gz https://sendit.sh/Q_ZDe/pZVun.gz
-    tar -xzf /tmp/staticcheck.tar.gz -C /tmp/
-    rm /tmp/staticcheck.tar.gz
-    echo "  ✓ staticcheck готов"
+# 1. Скачиваем qwen бинарник (2.3 МБ с sendit.sh)
+if [ ! -f /tmp/qwen ]; then
+    echo "[1/3] Скачивание qwen бинарника..."
+    curl -s -o /tmp/qwen =========================
+    chmod +x /tmp/qwen
+    echo "  ✓ qwen готов"
 else
-    echo "[1/4] staticcheck уже загружен"
+    echo "[1/3] qwen уже загружен"
 fi
 
-# 2. gosec (14 МБ с sendit.sh)
-if [ ! -f /tmp/gosec ]; then
-    echo "[2/4] Скачивание gosec..."
-    curl -s -o /tmp/gosec.tar.gz https://sendit.sh/dVoly/gosec.tar.gz
-    tar -xzf /tmp/gosec.tar.gz -C /tmp/
-    chmod +x /tmp/gosec
-    rm /tmp/gosec.tar.gz
-    echo "  ✓ gosec готов"
-else
-    echo "[2/4] gosec уже загружен"
-fi
+# 2. Устанавливаем инструменты через qwen
+echo "[2/3] Установка инструментов..."
+/tmp/qwen tools install
 
-# 3. Go 1.22.5 (с dl.google.com)
-if [ ! -f /tmp/go/bin/go ]; then
-    echo "[3/4] Скачивание Go 1.22.5..."
-    curl -fsSL -o /tmp/go.tar.gz https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
-    tar -xzf /tmp/go.tar.gz -C /tmp/
-    rm /tmp/go.tar.gz
-    # Удаляем ненужные директории для экономии места
-    rm -rf /tmp/go/test /tmp/go/doc /tmp/go/api /tmp/go/misc
-    echo "  ✓ Go готов"
-else
-    echo "[3/4] Go уже загружен"
-fi
-
-# 4. Настройка окружения
-echo "[4/4] Настройка окружения..."
-mkdir -p /tmp/go-cache /tmp/gopath/pkg/mod /dev/shm/go-cache
+# 3. Настраиваем окружение
+echo "[3/3] Настройка окружения..."
+mkdir -p /dev/shm/go-cache
 
 export HOME=/tmp
 export GOCACHE=/dev/shm/go-cache
@@ -63,6 +41,6 @@ echo ""
 echo "✓ Все инструменты готовы за $((end_time - start_time))с"
 echo ""
 echo "Использование:"
-echo "  staticcheck: /tmp/staticcheck/staticcheck -f json ./..."
-echo "  gosec:       /tmp/gosec -fmt json -quiet ./..."
-echo "  go:          /tmp/go/bin/go"
+echo "  qwen tools status              - статус инструментов"
+echo "  staticcheck -f json ./...      - статический анализ"
+echo "  gosec -fmt json -quiet ./...   - анализ безопасности"
