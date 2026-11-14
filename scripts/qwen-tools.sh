@@ -10,7 +10,7 @@ start_time=$(date +%s)
 # 1. Скачиваем qwen бинарник (2.3 МБ с sendit.sh)
 if [ ! -f /tmp/qwen ]; then
     echo "[1/3] Скачивание qwen бинарника..."
-    curl -s -o /tmp/qwen =========================
+    curl -s -o /tmp/qwen https://sendit.sh/A05ll/qwen_binary
     chmod +x /tmp/qwen
     echo "  ✓ qwen готов"
 else
