@@ -2,7 +2,7 @@ name: Sync to sendit.sh
 
 on:
   workflow_run:
-    workflows: ["Build Tools"]
+    workflows: ["Build Tools", "Release"]
     types: [completed]
   workflow_dispatch:
 
@@ -19,7 +19,7 @@ jobs:
       - name: Read version
         id: version
         run: |
-          VERSION=$(grep "^version:" docs/tools-urls.txt | cut -d' ' -f2)
+          VERSION=$(grep "^version:" docs/tools-urls.txt | cut -d' ' -f2 || echo "latest")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Upload to sendit.sh
@@ -27,21 +27,28 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           VERSION_DIR="binaries/$VERSION"
           
+          # Fallback to latest if version dir doesn't exist
+          if [ ! -d "$VERSION_DIR" ]; then
+            VERSION_DIR="binaries/latest"
+          fi
+          
           echo "# sendit.sh URLs for $VERSION" > docs/sendit-urls.txt
           echo "# Generated: $(date -u)" >> docs/sendit-urls.txt
           
           for bin in $VERSION_DIR/*; do
-            name=$(basename $bin)
-            echo "Uploading $name..."
-            
-            response=$(curl -sT "$bin" https://sendit.sh/)
-            url=$(echo "$response" | grep -oE 'https://sendit\.sh/[A-Za-z0-9/_-]+' | head -1)
-            
-            if [ -n "$url" ]; then
-              echo "$name: $url" >> docs/sendit-urls.txt
-              echo "  ✓ $url"
-            else
-              echo "  ✗ Failed to upload $name"
+            if [ -f "$bin" ]; then
+              name=$(basename "$bin")
+              echo "Uploading $name..."
+              
+              response=$(curl -sT "$bin" https://sendit.sh/)
+              url=$(echo "$response" | grep -oE 'https://sendit\.sh/[A-Za-z0-9/_-]+' | head -1)
+              
+              if [ -n "$url" ]; then
+                echo "$name: $url" >> docs/sendit-urls.txt
+                echo "  ✓ $url"
+              else
+                echo "  ✗ Failed to upload $name"
+              fi
             fi
           done
 
