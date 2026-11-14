@@ -1,13 +1,22 @@
 # Qwen Tools Archive URLs
-# Updated: 2026-11-13 23:41:33 UTC
+# Updated: 2026-11-14 05:12:37 UTC
 
-# staticcheck (14 МБ → ~5 МБ сжатый)
+# qwen бинарник (2.3 МБ сжатый)
+# Для скачивания: curl -o /tmp/qwen =========================
+# Использование: /tmp/qwen tools install
+qwen-url: =========================
+
+# staticcheck (7 МБ сжатый)
+# Для скачивания: curl -o /tmp/staticcheck.tar.gz https://sendit.sh/Q_ZDe/pZVun.gz
+# Для распаковки: tar -xzf /tmp/staticcheck.tar.gz -C /tmp/
 staticcheck-url: https://sendit.sh/Q_ZDe/pZVun.gz
 
-# Для использования:
-# 1. curl -o /tmp/staticcheck.tar.gz https://sendit.sh/Q_ZDe/pZVun.gz
-# 2. tar -xzf /tmp/staticcheck.tar.gz -C /tmp/
-# 3. /tmp/staticcheck/staticcheck -f json ./...
-
-# gosec (28 МБ → ~10 МБ сжатый)
+# gosec (14 МБ сжатый)
+# Для скачивания: curl -o /tmp/gosec.tar.gz https://sendit.sh/dVoly/gosec.tar.gz
+# Для распаковки: tar -xzf /tmp/gosec.tar.gz -C /tmp/
 gosec-url: https://sendit.sh/dVoly/gosec.tar.gz
+
+# Go скачивается с dl.google.com каждый раз:
+# curl -fsSL -o /tmp/go.tar.gz https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
+# tar -xzf /tmp/go.tar.gz -C /tmp/
+go-url: https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
