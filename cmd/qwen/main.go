@@ -20,8 +20,17 @@ type Tool struct {
 }
 
 var toolRegistry = []Tool{
-	{"staticcheck", "https://sendit.sh/Q_ZDe/pZVun.gz", "/tmp/staticcheck/staticcheck", "7 МБ"},
-	{"gosec", "https://sendit.sh/dVoly/gosec.tar.gz", "/tmp/gosec", "14 МБ"},
+	{"staticcheck", "", "/tmp/staticcheck", "13 МБ"},
+	{"gosec", "", "/tmp/gosec", "28 МБ"},
+	{"errcheck", "", "/tmp/errcheck", "3 МБ"},
+	{"govulncheck", "", "/tmp/govulncheck", "10 МБ"},
+	{"golangci-lint", "", "/tmp/golangci-lint", "25 МБ"},
+	{"goimports", "", "/tmp/goimports", "5 МБ"},
+	{"revive", "", "/tmp/revive", "8 МБ"},
+	{"deadcode", "", "/tmp/deadcode", "5 МБ"},
+	{"ineffassign", "", "/tmp/ineffassign", "3 МБ"},
+	{"unconvert", "", "/tmp/unconvert", "3 МБ"},
+	{"bodyclose", "", "/tmp/bodyclose", "3 МБ"},
 }
 
 func main() {
