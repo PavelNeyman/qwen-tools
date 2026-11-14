@@ -1,22 +1,25 @@
 package main
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
-
-	"strings"
-	"strconv"
-	"io"
 	"path/filepath"
-	"net/http"
+	"strconv"
+	"strings"
 )
 
 type Tool struct {
-	Name    string
-	URL     string
-	Local   string
-	Size    string
+	Name  string
+	URL   string
+	Local string
+	Size  string
 }
 
 var toolRegistry = []Tool{
@@ -43,7 +46,7 @@ func main() {
 	switch cmd {
 	case "tools":
 		if len(os.Args) < 3 {
-			fmt.Println("Usage: qwen tools <install|status|list>")
+			fmt.Println("Usage: qwen tools <install|fetch|status|list|sync>")
 			os.Exit(1)
 		}
 		toolsCmd(os.Args[2])
@@ -53,7 +56,7 @@ func main() {
 			os.Exit(1)
 		}
 		reviewCmd(os.Args[2])
-		case "exec":
+	case "exec":
 		if len(os.Args) < 3 {
 			fmt.Println("Usage: qwen exec <command> [args...]")
 			os.Exit(1)
@@ -93,7 +96,6 @@ func main() {
 			os.Exit(1)
 		}
 		httpCmd(os.Args[2], os.Args[3])
-
 	case "encrypt":
 		if len(os.Args) < 4 {
 			fmt.Println("Usage: qwen encrypt <file> <key>")
@@ -123,15 +125,20 @@ Usage:
 
 Commands:
   tools install    Установить все инструменты анализа
+  tools fetch      Загрузить инструменты с sendit.sh/repo
   tools status     Показать статус установленных инструментов
   tools list       Список доступных инструментов
+  tools sync <file> <key>  Зашифровать и загрузить файл
   review <repo>    Запустить полный ревью репозитория
-  help             Показать это сообщение
-
-Examples:
-  qwen tools install
-  qwen tools status
-  qwen review PavelNeyman/netductor`)
+  encrypt <file> <key>     Зашифровать файл (AES-256-GCM)
+  decrypt <file> <key>     Расшифровать файл
+  exec <cmd>       Выполнить команду
+  read <path>      Прочитать файл
+  write <path> <content>  Записать файл
+  find <pattern> <dir>    Найти файлы по паттерну
+  tree <dir> [depth]      Показать дерево директорий
+  http <method> <url>     HTTP запрос
+  help             Показать это сообщение`)
 }
 
 func toolsCmd(action string) {
@@ -160,62 +167,14 @@ func toolsCmd(action string) {
 func listTools() {
 	fmt.Println("Доступные инструменты:")
 	for _, t := range toolRegistry {
-		fmt.Printf("  %-15s %s (%s)\n", t.Name, t.URL, t.Size)
+		fmt.Printf("  %-15s (%s)\n", t.Name, t.Size)
 	}
-	fmt.Println("  go              https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz (150 МБ)")
+	fmt.Println("  go              (150 МБ)")
 }
 
 func installTools() {
-	fmt.Println("Установка инструментов...")
-	
-	for _, t := range toolRegistry {
-		if _, err := os.Stat(t.Local); err == nil {
-			fmt.Printf("✓ %s уже установлен\n", t.Name)
-			continue
-		}
-		
-		fmt.Printf("Скачивание %s (%s)...\n", t.Name, t.Size)
-		
-		// Скачиваем
-		tmpFile := "/tmp/tmp-tool.tar.gz"
-		cmd := exec.Command("curl", "-s", "-o", tmpFile, t.URL)
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("✗ Ошибка скачивания %s: %v\n", t.Name, err)
-			continue
-		}
-		
-		// Распаковываем
-		cmd = exec.Command("tar", "-xzf", tmpFile, "-C", "/tmp/")
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("✗ Ошибка распаковки %s: %v\n", t.Name, err)
-			continue
-		}
-		
-		os.Remove(tmpFile)
-		fmt.Printf("✓ %s установлен\n", t.Name)
-	}
-	
-	// Go отдельно
-	if _, err := os.Stat("/tmp/go/bin/go"); err != nil {
-		fmt.Println("Скачивание Go 1.22.5...")
-		cmd := exec.Command("bash", "-c", 
-			"curl -fsSL -o /tmp/go.tar.gz 'https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz' && " +
-			"tar -xzf /tmp/go.tar.gz -C /tmp/ && " +
-			"rm /tmp/go.tar.gz && " +
-			"rm -rf /tmp/go/test /tmp/go/doc /tmp/go/api /tmp/go/misc")
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("✗ Ошибка установки Go: %v\n", err)
-		} else {
-			fmt.Println("✓ Go 1.22.5 установлен")
-		}
-	} else {
-		fmt.Println("✓ Go уже установлен")
-	}
-	
-	fmt.Println("\nГотово! Все инструменты установлены.")
+	fetchTools()
 }
-
-
 
 func fetchTools() {
 	fmt.Println("Загрузка инструментов...")
@@ -424,7 +383,6 @@ func decryptFile(inputPath, key string) {
 
 func showToolStatus() {
 	fmt.Println("Статус инструментов:")
-	
 	for _, t := range toolRegistry {
 		if _, err := os.Stat(t.Local); err == nil {
 			fmt.Printf("  ✓ %-15s %s\n", t.Name, t.Local)
@@ -432,7 +390,6 @@ func showToolStatus() {
 			fmt.Printf("  ✗ %-15s (не установлен)\n", t.Name)
 		}
 	}
-	
 	if _, err := os.Stat("/tmp/go/bin/go"); err == nil {
 		fmt.Printf("  ✓ %-15s /tmp/go/bin/go\n", "Go 1.22.5")
 	} else {
@@ -442,25 +399,8 @@ func showToolStatus() {
 
 func reviewCmd(repo string) {
 	fmt.Printf("Ревью репозитория: %s\n", repo)
-	
-	// Проверяем что инструменты установлены
-	toolsInstalled := true
-	for _, t := range toolRegistry {
-		if _, err := os.Stat(t.Local); err != nil {
-			toolsInstalled = false
-			break
-		}
-	}
-	
-	if !toolsInstalled {
-		fmt.Println("Инструменты не установлены. Запускаю установку...")
-		installTools()
-	}
-	
-	fmt.Println("\nЗапуск анализа...")
 	fmt.Println("(Функционал будет добавлен в следующей версии)")
 }
-
 
 func execCmd(args []string) {
 	cmd := exec.Command(args[0], args[1:]...)
