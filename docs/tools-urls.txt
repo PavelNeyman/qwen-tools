@@ -1,22 +1,18 @@
-# Qwen Tools Archive URLs
-# Updated: 2026-11-14 05:12:59 UTC
+# Qwen Tools URLs
+# Version: v1.3.1
+# Updated: 2026-11-14 16:10:26 UTC
 
-# qwen бинарник (2.3 МБ сжатый)
-# Для скачивания: curl -o /tmp/qwen https://sendit.sh/A05ll/qwen_binary
-# Использование: /tmp/qwen tools install
-qwen-url: https://sendit.sh/A05ll/qwen_binary
+version: v1.3.1
 
-# staticcheck (7 МБ сжатый)
-# Для скачивания: curl -o /tmp/staticcheck.tar.gz https://sendit.sh/Q_ZDe/pZVun.gz
-# Для распаковки: tar -xzf /tmp/staticcheck.tar.gz -C /tmp/
-staticcheck-url: https://sendit.sh/Q_ZDe/pZVun.gz
-
-# gosec (14 МБ сжатый)
-# Для скачивания: curl -o /tmp/gosec.tar.gz https://sendit.sh/dVoly/gosec.tar.gz
-# Для распаковки: tar -xzf /tmp/gosec.tar.gz -C /tmp/
-gosec-url: https://sendit.sh/dVoly/gosec.tar.gz
-
-# Go скачивается с dl.google.com каждый раз:
-# curl -fsSL -o /tmp/go.tar.gz https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
-# tar -xzf /tmp/go.tar.gz -C /tmp/
-go-url: https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz
+qwen: binaries/latest/qwen-linux-amd64
+staticcheck: binaries/latest/staticcheck-linux-amd64
+gosec: binaries/latest/gosec-linux-amd64
+errcheck: binaries/latest/errcheck-linux-amd64
+govulncheck: binaries/latest/govulncheck-linux-amd64
+golangci-lint: binaries/latest/golangci-lint-linux-amd64
+goimports: binaries/latest/goimports-linux-amd64
+revive: binaries/latest/revive-linux-amd64
+deadcode: binaries/latest/deadcode-linux-amd64
+ineffassign: binaries/latest/ineffassign-linux-amd64
+unconvert: binaries/latest/unconvert-linux-amd64
+bodyclose: binaries/latest/bodyclose-linux-amd64
