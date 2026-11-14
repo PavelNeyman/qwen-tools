@@ -1,16 +1,20 @@
 #!/bin/bash
 # qwen-tools - загрузка инструментов для статического анализа Go-кода
-# Использует sendit.sh для персистентного хранения
+# Использует GitHub API для персистентного хранения
 
 set -e
 
 echo "=== Загрузка qwen tools ==="
 start_time=$(date +%s)
 
-# 1. Скачиваем qwen бинарник (2.3 МБ с sendit.sh)
+# 1. Скачиваем qwen бинарник через GitHub API
 if [ ! -f /tmp/qwen ]; then
-    echo "[1/3] Скачивание qwen бинарника..."
-    curl -s -o /tmp/qwen https://sendit.sh/A05ll/qwen_binary
+    echo "[1/3] Скачивание qwen бинарника через API..."
+    # Скачиваем .gz через API
+    curl -s -H "Authorization: Bearer $GH_TOKEN" \
+         -H "Accept: application/vnd.github.v3.raw" \
+         "https://api.github.com/repos/PavelNeyman/qwen-tools/contents/qwen-linux-amd64.gz" \
+         | gunzip > /tmp/qwen
     chmod +x /tmp/qwen
     echo "  ✓ qwen готов"
 else
