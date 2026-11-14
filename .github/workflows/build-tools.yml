@@ -31,7 +31,7 @@ jobs:
           echo "version=${LATEST_TAG}" >> $GITHUB_OUTPUT
           echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
-      - name: Build qwen (linux/amd64 only)
+      - name: Build qwen (STRICTLY linux/amd64)
         run: |
           VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
           mkdir -p $VERSION_DIR
@@ -41,57 +41,45 @@ jobs:
             -o $VERSION_DIR/qwen-linux-amd64 \
             ./cmd/qwen
 
-      - name: Download static analysis tools (linux/amd64 only)
+      - name: Download tools (STRICTLY linux/amd64)
         run: |
           VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
           mkdir -p $VERSION_DIR
           
-          echo "Downloading staticcheck..."
           curl -sL https://github.com/dominikh/go-tools/releases/download/2024.1.1/staticcheck_linux_amd64.tar.gz | tar -xz
           mv staticcheck/staticcheck $VERSION_DIR/staticcheck-linux-amd64
           
-          echo "Downloading gosec..."
           curl -sL https://github.com/securego/gosec/releases/download/v2.21.4/gosec_2.21.4_linux_amd64.tar.gz | tar -xz
           mv gosec $VERSION_DIR/gosec-linux-amd64
           
-          echo "Installing errcheck..."
           go install github.com/kisielk/errcheck@latest
           mv $(go env GOPATH)/bin/errcheck $VERSION_DIR/errcheck-linux-amd64
           
-          echo "Installing govulncheck..."
           go install golang.org/x/vuln/cmd/govulncheck@latest
           mv $(go env GOPATH)/bin/govulncheck $VERSION_DIR/govulncheck-linux-amd64
           
-          echo "Downloading golangci-lint..."
           curl -sL https://github.com/golangci/golangci-lint/releases/download/v1.61.0/golangci-lint-1.61.0-linux-amd64.tar.gz | tar -xz
           mv golangci-lint-1.61.0-linux-amd64/golangci-lint $VERSION_DIR/golangci-lint-linux-amd64
           
-          echo "Installing goimports..."
           go install golang.org/x/tools/cmd/goimports@latest
           mv $(go env GOPATH)/bin/goimports $VERSION_DIR/goimports-linux-amd64
           
-          echo "Installing revive..."
           go install github.com/mgechev/revive@latest
           mv $(go env GOPATH)/bin/revive $VERSION_DIR/revive-linux-amd64
           
-          echo "Installing deadcode..."
           go install golang.org/x/tools/cmd/deadcode@latest
           mv $(go env GOPATH)/bin/deadcode $VERSION_DIR/deadcode-linux-amd64
           
-          echo "Installing ineffassign..."
           go install github.com/gordonklaus/ineffassign@latest
           mv $(go env GOPATH)/bin/ineffassign $VERSION_DIR/ineffassign-linux-amd64
           
-          echo "Installing unconvert..."
           go install github.com/mdempsky/unconvert@latest
           mv $(go env GOPATH)/bin/unconvert $VERSION_DIR/unconvert-linux-amd64
           
-          echo "Installing bodyclose..."
           go install github.com/timakin/bodyclose@latest
           mv $(go env GOPATH)/bin/bodyclose $VERSION_DIR/bodyclose-linux-amd64
           
           chmod +x $VERSION_DIR/*
-          
           rm -rf binaries/latest
           cp -r $VERSION_DIR binaries/latest
 
@@ -107,29 +95,17 @@ jobs:
           rm -rf binaries/latest
           cp -r $VERSION_DIR binaries/latest
 
-      - name: Commit to repo
+      - name: Commit and Push safely
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add binaries/
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: build tools ${{ steps.version.outputs.version }}-${{ steps.version.outputs.timestamp }}"
-            git push
-          fi
-
-      - name: Update tools-urls.txt
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
+          
           mkdir -p docs
           cat > docs/tools-urls.txt << EOF
           # Qwen Tools URLs
-          # Version: $VERSION
-          # Updated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          # Version: ${{ steps.version.outputs.version }}
           
-          version: $VERSION
-          
+          version: ${{ steps.version.outputs.version }}
           qwen: binaries/latest/qwen-linux-amd64
           staticcheck: binaries/latest/staticcheck-linux-amd64
           gosec: binaries/latest/gosec-linux-amd64
@@ -144,10 +120,12 @@ jobs:
           bodyclose: binaries/latest/bodyclose-linux-amd64
           EOF
           
-          git add docs/tools-urls.txt
+          git add binaries/ docs/tools-urls.txt
+          
           if git diff --staged --quiet; then
-            echo "No changes to tools-urls.txt"
+            echo "No changes to commit"
           else
-            git commit -m "docs: update tools-urls.txt to $VERSION"
-            git push
+            git commit -m "chore: build tools ${{ steps.version.outputs.version }}-${{ steps.version.outputs.timestamp }}"
+            git pull --rebase origin main
+            git push origin main
           fi
