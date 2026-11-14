@@ -31,22 +31,17 @@ jobs:
           echo "version=${LATEST_TAG}" >> $GITHUB_OUTPUT
           echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
 
-      - name: Build qwen (all platforms)
+      - name: Build qwen (linux/amd64 only)
         run: |
           VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
           mkdir -p $VERSION_DIR
-          PLATFORMS="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64"
-          for platform in $PLATFORMS; do
-            GOOS=${platform%/*}
-            GOARCH=${platform#*/}
-            echo "Building qwen for $GOOS/$GOARCH..."
-            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
-              -ldflags="-s -w" \
-              -o $VERSION_DIR/qwen-$GOOS-$GOARCH \
-              ./cmd/qwen
-          done
+          echo "Building qwen for linux/amd64..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w" \
+            -o $VERSION_DIR/qwen-linux-amd64 \
+            ./cmd/qwen
 
-      - name: Download static analysis tools
+      - name: Download static analysis tools (linux/amd64 only)
         run: |
           VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
           mkdir -p $VERSION_DIR
