@@ -4,6 +4,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"strings"
+	"strconv"
+	"io"
+	"path/filepath"
+	"net/http"
 )
 
 type Tool struct {
@@ -38,6 +44,47 @@ func main() {
 			os.Exit(1)
 		}
 		reviewCmd(os.Args[2])
+		case "exec":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: qwen exec <command> [args...]")
+			os.Exit(1)
+		}
+		execCmd(os.Args[2:])
+	case "read":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: qwen read <path>")
+			os.Exit(1)
+		}
+		readCmd(os.Args[2])
+	case "write":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: qwen write <path> <content>")
+			os.Exit(1)
+		}
+		writeCmd(os.Args[2], os.Args[3])
+	case "find":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: qwen find <pattern> <dir>")
+			os.Exit(1)
+		}
+		findCmd(os.Args[2], os.Args[3])
+	case "tree":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: qwen tree <dir> [depth]")
+			os.Exit(1)
+		}
+		depth := 3
+		if len(os.Args) > 3 {
+			depth = atoi(os.Args[3])
+		}
+		treeCmd(os.Args[2], depth)
+	case "http":
+		if len(os.Args) < 4 {
+			fmt.Println("Usage: qwen http <method> <url>")
+			os.Exit(1)
+		}
+		httpCmd(os.Args[2], os.Args[3])
+
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -176,4 +223,89 @@ func reviewCmd(repo string) {
 	
 	fmt.Println("\nЗапуск анализа...")
 	fmt.Println("(Функционал будет добавлен в следующей версии)")
+}
+
+
+func execCmd(args []string) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "exec error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func readCmd(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "read error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Print(string(data))
+}
+
+func writeCmd(path, content string) {
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "write error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Written %d bytes to %s\n", len(content), path)
+}
+
+func findCmd(pattern, dir string) {
+	pattern = strings.ToLower(pattern)
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if strings.Contains(strings.ToLower(path), pattern) {
+			fmt.Println(path)
+		}
+		return nil
+	})
+}
+
+func treeCmd(dir string, depth int) {
+	printTree(dir, 0, depth)
+}
+
+func printTree(dir string, currentDepth, maxDepth int) {
+	if currentDepth >= maxDepth {
+		return
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		indent := strings.Repeat("  ", currentDepth)
+		if entry.IsDir() {
+			fmt.Printf("%s%s/\n", indent, entry.Name())
+			printTree(filepath.Join(dir, entry.Name()), currentDepth+1, maxDepth)
+		} else {
+			fmt.Printf("%s%s\n", indent, entry.Name())
+		}
+	}
+}
+
+func httpCmd(method, url string) {
+	req, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "http error: %v\n", err)
+		os.Exit(1)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "http error: %v\n", err)
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	fmt.Printf("Status: %d\n", resp.StatusCode)
+	io.Copy(os.Stdout, resp.Body)
+}
+
+func atoi(s string) int {
+	n, _ := strconv.Atoi(s)
+	return n
 }
