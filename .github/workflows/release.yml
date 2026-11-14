@@ -1,44 +1,155 @@
 name: Release
+
 on:
   push:
     tags: ['v*']
   workflow_dispatch: {}
+
 permissions:
   contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-      - name: Build tools (STRICTLY linux/amd64)
+
+      - name: Get version from tag
+        id: version
         run: |
-          mkdir -p artifacts
-          for tool in gh-tools qwen-bootstrap qwen-analyzer qwen; do
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o artifacts/${tool}-linux-amd64 ./cmd/${tool}
-          done
-      - name: UPX compress
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Build qwen (STRICTLY linux/amd64)
+        run: |
+          VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
+          mkdir -p $VERSION_DIR
+          echo "Building qwen for linux/amd64..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+            -ldflags="-s -w" \
+            -o $VERSION_DIR/qwen-linux-amd64 \
+            ./cmd/qwen
+
+      - name: Download tools (STRICTLY linux/amd64)
+        run: |
+          VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
+          mkdir -p $VERSION_DIR
+          
+          curl -sL https://github.com/dominikh/go-tools/releases/download/2024.1.1/staticcheck_linux_amd64.tar.gz | tar -xz
+          mv staticcheck/staticcheck $VERSION_DIR/staticcheck-linux-amd64
+          
+          curl -sL https://github.com/securego/gosec/releases/download/v2.21.4/gosec_2.21.4_linux_amd64.tar.gz | tar -xz
+          mv gosec $VERSION_DIR/gosec-linux-amd64
+          
+          go install github.com/kisielk/errcheck@latest
+          mv $(go env GOPATH)/bin/errcheck $VERSION_DIR/errcheck-linux-amd64
+          
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          mv $(go env GOPATH)/bin/govulncheck $VERSION_DIR/govulncheck-linux-amd64
+          
+          curl -sL https://github.com/golangci/golangci-lint/releases/download/v1.61.0/golangci-lint-1.61.0-linux-amd64.tar.gz | tar -xz
+          mv golangci-lint-1.61.0-linux-amd64/golangci-lint $VERSION_DIR/golangci-lint-linux-amd64
+          
+          go install golang.org/x/tools/cmd/goimports@latest
+          mv $(go env GOPATH)/bin/goimports $VERSION_DIR/goimports-linux-amd64
+          
+          go install github.com/mgechev/revive@latest
+          mv $(go env GOPATH)/bin/revive $VERSION_DIR/revive-linux-amd64
+          
+          go install golang.org/x/tools/cmd/deadcode@latest
+          mv $(go env GOPATH)/bin/deadcode $VERSION_DIR/deadcode-linux-amd64
+          
+          go install github.com/gordonklaus/ineffassign@latest
+          mv $(go env GOPATH)/bin/ineffassign $VERSION_DIR/ineffassign-linux-amd64
+          
+          go install github.com/mdempsky/unconvert@latest
+          mv $(go env GOPATH)/bin/unconvert $VERSION_DIR/unconvert-linux-amd64
+          
+          go install github.com/timakin/bodyclose@latest
+          mv $(go env GOPATH)/bin/bodyclose $VERSION_DIR/bodyclose-linux-amd64
+          
+          chmod +x $VERSION_DIR/*
+          rm -rf binaries/latest
+          cp -r $VERSION_DIR binaries/latest
+
+      - name: Compress binaries
         run: |
           sudo apt-get update && sudo apt-get install -y upx
-          for tool in artifacts/*; do
-            if file "$tool" | grep -q "ELF"; then
-              upx --best --lzma "$tool" || true
+          VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
+          for bin in $VERSION_DIR/*; do
+            if file "$bin" | grep -q "ELF"; then
+              upx --best --lzma "$bin" || true
             fi
           done
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tools-linux-amd64
-          path: artifacts/*
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          generate_release_notes: true
+          rm -rf binaries/latest
+          cp -r $VERSION_DIR binaries/latest
+
+      - name: Upload to sendit.sh
+        run: |
+          VERSION_DIR="binaries/${{ steps.version.outputs.version }}"
+          mkdir -p docs
+          
+          echo "# sendit.sh URLs" > docs/sendit-urls.txt
+          echo "# Version: ${{ steps.version.outputs.version }}" >> docs/sendit-urls.txt
+          echo "" >> docs/sendit-urls.txt
+          
+          for bin in $VERSION_DIR/*; do
+            name=$(basename $bin)
+            echo "Uploading $name..."
+            url=$(curl -sT "$bin" https://sendit.sh/ | grep -oE 'https://sendit\.sh/[A-Za-z0-9/_-]+' | head -1)
+            if [ -n "$url" ]; then
+              echo "$name: $url" >> docs/sendit-urls.txt
+              echo "  ✓ $url"
+            else
+              echo "  ✗ Failed"
+            fi
+          done
+          
+          cat docs/sendit-urls.txt
+
+      - name: Commit and Push safely to main
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          cat > docs/tools-urls.txt << EOF
+          # Qwen Tools URLs
+          # Version: ${{ steps.version.outputs.version }}
+          
+          version: ${{ steps.version.outputs.version }}
+          qwen: binaries/latest/qwen-linux-amd64
+          staticcheck: binaries/latest/staticcheck-linux-amd64
+          gosec: binaries/latest/gosec-linux-amd64
+          errcheck: binaries/latest/errcheck-linux-amd64
+          govulncheck: binaries/latest/govulncheck-linux-amd64
+          golangci-lint: binaries/latest/golangci-lint-linux-amd64
+          goimports: binaries/latest/goimports-linux-amd64
+          revive: binaries/latest/revive-linux-amd64
+          deadcode: binaries/latest/deadcode-linux-amd64
+          ineffassign: binaries/latest/ineffassign-linux-amd64
+          unconvert: binaries/latest/unconvert-linux-amd64
+          bodyclose: binaries/latest/bodyclose-linux-amd64
+          EOF
+          
+          git add binaries/ docs/
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            # BULLETPROOF PUSH:
+            # 1. Fetch latest main
+            git fetch origin main
+            # 2. Reset softly to origin/main (keeps all our staged changes!)
+            git reset --soft origin/main
+            # 3. Commit on top of actual main
+            git commit -m "release: ${{ steps.version.outputs.version }} binaries and URLs"
+            # 4. Clean push to main (no force, no rebase conflicts)
+            git push origin main
+          fi
